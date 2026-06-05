@@ -159,6 +159,17 @@
             </template>
           </div>
 
+          <!-- Clipboard Actions -->
+          <div class="clipboard-actions-bar animate-fade-in" v-if="clipboard">
+            <button class="btn btn-primary" @click="pasteItem" :title="`Colar aqui`">
+              <ClipboardIcon class="w-4 h-4" />
+              Colar ({{ clipboard.operation === 'copy' ? 'Copiar' : 'Mover' }}: {{ clipboard.name }})
+            </button>
+            <button class="btn btn-icon btn-danger" @click="clipboard = null" title="Cancelar">
+              <XIcon class="w-4 h-4" />
+            </button>
+          </div>
+
           <!-- View Toggle & Sort -->
           <div class="toolbar-controls">
             <select v-model="sortBy" class="sort-select">
@@ -287,6 +298,12 @@
           <button v-if="!selectedItem.isDir" class="btn btn-primary w-full justify-center" @click="downloadFile(selectedItem)">
             <DownloadIcon class="w-4 h-4" /> Download
           </button>
+          <button class="btn w-full justify-center" @click="copyItem(selectedItem)">
+            <CopyIcon class="w-4 h-4" /> Copiar
+          </button>
+          <button class="btn w-full justify-center" @click="cutItem(selectedItem)">
+            <ScissorsIcon class="w-4 h-4" /> Mover
+          </button>
           <button class="btn w-full justify-center" @click="openRenameModal">
             <Edit3Icon class="w-4 h-4" /> Renomear
           </button>
@@ -369,7 +386,8 @@ import {
   CloudIcon, SearchIcon, UploadIcon, FolderPlusIcon, RefreshCwIcon,
   HomeIcon, LayoutGridIcon, ListIcon, FolderIcon, FileIcon, 
   FileTextIcon, ImageIcon, FilmIcon, MusicIcon, XIcon, DownloadIcon,
-  Edit3Icon, Trash2Icon, FolderOpenIcon, UserIcon, LogOutIcon
+  Edit3Icon, Trash2Icon, FolderOpenIcon, UserIcon, LogOutIcon,
+  ClipboardIcon, CopyIcon, ScissorsIcon
 } from '@lucide/vue';
 import { webdav } from './services/webdav';
 
@@ -421,6 +439,56 @@ const removeTransferAfterDelay = (id) => {
   setTimeout(() => {
     removeTransfer(id);
   }, 3000);
+};
+
+// Clipboard State for Copy/Cut/Paste
+const clipboard = ref(null);
+
+const copyItem = (item) => {
+  clipboard.value = {
+    path: item.path,
+    name: item.name,
+    isDir: item.isDir,
+    operation: 'copy'
+  };
+  showToast(`Copiado: ${item.name}`, 'info');
+};
+
+const cutItem = (item) => {
+  clipboard.value = {
+    path: item.path,
+    name: item.name,
+    isDir: item.isDir,
+    operation: 'cut'
+  };
+  showToast(`Recortado: ${item.name}`, 'info');
+};
+
+const pasteItem = async () => {
+  if (!clipboard.value) return;
+  
+  const targetPath = `${currentPath.value}/${clipboard.value.name}`.replace(/\/+/g, '/');
+  
+  if (targetPath === clipboard.value.path) {
+    showToast('O destino não pode ser idêntico à origem.', 'error');
+    return;
+  }
+  
+  try {
+    if (clipboard.value.operation === 'copy') {
+      showToast(`Copiando ${clipboard.value.name}...`, 'info');
+      await webdav.copyItem(clipboard.value.path, targetPath);
+      showToast('Item copiado com sucesso!', 'success');
+    } else {
+      showToast(`Movendo ${clipboard.value.name}...`, 'info');
+      await webdav.renameItem(clipboard.value.path, targetPath);
+      showToast('Item movido com sucesso!', 'success');
+      clipboard.value = null; // Clear clipboard for cut operation
+    }
+    loadCurrentDirectory();
+  } catch (err) {
+    showToast(`Erro ao colar: ${err.message}`, 'error');
+  }
 };
 
 // Categories Definition

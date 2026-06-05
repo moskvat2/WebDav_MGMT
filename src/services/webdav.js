@@ -225,6 +225,24 @@ export const webdav = {
   },
 
   /**
+   * Copy a file/folder
+   */
+  async copyItem(oldPath, newPath) {
+    const response = await fetch(`${BASE_URL}${cleanPath(oldPath)}`, {
+      method: 'COPY',
+      headers: {
+        'Authorization': getAuthHeader(),
+        'Destination': encodeURI(cleanPath(newPath))
+      }
+    });
+    
+    if (!response.ok) {
+      throw new Error(`Failed to copy item: ${response.statusText}`);
+    }
+    return true;
+  },
+
+  /**
    * Upload a file
    */
   uploadFile(parentPath, file, onProgress) {
