@@ -11,6 +11,8 @@ export default defineConfig({
         target: 'http://172.16.0.99:5005',
         changeOrigin: true,
         rewrite: (path) => path.replace(/^\/api\/webdav/, ''),
+        timeout: 0,
+        proxyTimeout: 0,
         configure: (proxy, options) => {
           // You can debug proxy requests if needed
         }
