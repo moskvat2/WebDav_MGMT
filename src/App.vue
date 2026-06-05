@@ -83,6 +83,15 @@
           <FolderPlusIcon class="w-4 h-4" />
           Nova Pasta
         </button>
+        <button 
+          v-if="clipboard" 
+          class="btn btn-primary animate-fade-in" 
+          @click="pasteItem"
+          :title="`Colar ${clipboard.name} aqui`"
+        >
+          <ClipboardIcon class="w-4 h-4" />
+          Colar
+        </button>
         <button class="btn btn-icon" @click="loadCurrentDirectory" :disabled="loading" title="Atualizar">
           <RefreshCwIcon :class="['w-4 h-4', { 'animate-spin': loading }]" />
         </button>
@@ -298,6 +307,9 @@
           <button v-if="!selectedItem.isDir" class="btn btn-primary w-full justify-center" @click="downloadFile(selectedItem)">
             <DownloadIcon class="w-4 h-4" /> Download
           </button>
+          <button v-if="selectedItem.isDir && clipboard" class="btn btn-primary w-full justify-center" @click="pasteIntoFolder">
+            <ClipboardIcon class="w-4 h-4" /> Colar Aqui
+          </button>
           <button class="btn w-full justify-center" @click="copyItem(selectedItem)">
             <CopyIcon class="w-4 h-4" /> Copiar
           </button>
@@ -485,6 +497,35 @@ const pasteItem = async () => {
       showToast('Item movido com sucesso!', 'success');
       clipboard.value = null; // Clear clipboard for cut operation
     }
+    loadCurrentDirectory();
+  } catch (err) {
+    showToast(`Erro ao colar: ${err.message}`, 'error');
+  }
+};
+
+const pasteIntoFolder = async () => {
+  if (!clipboard.value || !selectedItem.value || !selectedItem.value.isDir) return;
+  
+  const targetPath = `${selectedItem.value.path}/${clipboard.value.name}`.replace(/\/+/g, '/');
+  
+  if (targetPath === clipboard.value.path) {
+    showToast('O destino não pode ser idêntico à origem.', 'error');
+    return;
+  }
+  
+  try {
+    if (clipboard.value.operation === 'copy') {
+      showToast(`Copiando ${clipboard.value.name} para ${selectedItem.value.name}...`, 'info');
+      await webdav.copyItem(clipboard.value.path, targetPath);
+      showToast('Item copiado com sucesso!', 'success');
+    } else {
+      showToast(`Movendo ${clipboard.value.name} para ${selectedItem.value.name}...`, 'info');
+      await webdav.renameItem(clipboard.value.path, targetPath);
+      showToast('Item movido com sucesso!', 'success');
+      clipboard.value = null; // Clear clipboard for cut operation
+    }
+    showDetails.value = false;
+    selectedItem.value = null;
     loadCurrentDirectory();
   } catch (err) {
     showToast(`Erro ao colar: ${err.message}`, 'error');
