@@ -5,6 +5,7 @@ import vue from '@vitejs/plugin-vue'
 export default defineConfig({
   plugins: [vue()],
   server: {
+    allowedHosts: 'all',
     proxy: {
       '/api/webdav': {
         target: 'http://172.16.0.99:5005',
